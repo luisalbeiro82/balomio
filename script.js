@@ -62,9 +62,9 @@ let apuestasCache = [];     // apuestas guardadas del juego actual
 let sorteosCache = [];      // resultados que el usuario registra al comparar (juego actual)
 let sorteosSemilla = [];    // historial oficial precargado del juego actual (solo lectura)
 
-// Semilla histórica por juego (archivos servidos junto a la app). Baloto: sorteos
-// oficiales 2025–2026 digitados desde resultadobaloto.com / resultados-de-loteria.com.
-const SEMILLAS = { baloto: "sorteos-baloto.json" };
+// Semilla histórica por juego (archivos servidos junto a la app). Sorteos oficiales
+// 2025–2026: Baloto de resultadobaloto.com / resultados-de-loteria.com; MiLoto de quecayo.com.
+const SEMILLAS = { baloto: "sorteos-baloto.json", miloto: "sorteos-miloto.json" };
 const semillaCache = {};    // juego -> array (para no re-descargar)
 
 // ===== Aleatoriedad segura =====
