@@ -21,6 +21,10 @@ Generador de tiquetes para Baloto y MiLoto (loterías de Colombia). Vanilla JS, 
 - Íconos generados con GDI+ (PowerShell System.Drawing): balota teal con "B". `manifest.json` para el acceso directo Android.
 - Botón "Jugar en línea (oficial)": abre https://apuestaaqui.baloto.com/#/seguridad/login (plataforma oficial que vende ambos juegos). `urlJugar` por juego en `JUEGOS`; la etiqueta cambia según el juego activo.
 
+## Estado actual
+
+**Versión desplegada: `?v=11` / SW `balomio-v11`** (2026-07-09). App estable y verificada en móvil (Android) y PC. El usuario (Luis, luis.albeiro.h@gmail.com) usa la app con sesión Google → apuestas y sorteos en la nube. Al editar css/js: subir `?v=N` en `index.html` **y** el `CACHE`/precache en `sw.js` a la misma N.
+
 ## Funcionalidades actuales (al 2026-07-09)
 
 Generador de tiquetes (con filtro de combinaciones populares) · guardado de apuestas (localStorage / Firestore + login Google) · comparador de aciertos (digitando ganadores) · estadísticas de frecuencia con semilla histórica 2025–2026 (calientes/fríos + gráfico) · botón de jugar en línea.
@@ -30,6 +34,7 @@ Añadidas 2026-07-09 (6 funcionalidades en una tanda):
 2. **Análisis del histórico** (`mostrarAnalisis`): pares/impares, bajos/medios/altos (terciles del rango), primos, decenas, y suma promedio+rango. Barras horizontales con valor+% (no solo color).
 3. **Anotación de tiquetes generados** (`anotarTiquete` con `estadoJuego`): nº de calientes/fríos que incluye, suma vs. promedio, y si la combinación ya salió. Curiosidad, con aviso de que no cambia la probabilidad.
 4. **PWA offline** (`sw.js`, CACHE `balomio-vN` = misma versión que `?v=N`): precachea app shell + semillas + SDK de Firebase (gstatic) para arrancar sin conexión; peticiones dinámicas de Firestore/Auth siempre van a la red. `manifest.json` con maskable icon, scope, orientation.
+   - **IMPORTANTE (aprendido el 2026-07-09):** el HTML/navegación va **RED PRIMERO** (no caché primero), si no los usuarios quedan atascados en la versión vieja aunque recarguen (la caché del SW es aparte de la del navegador; borrar caché del navegador NO la limpia). El resto (css/js versionados, imágenes, json) va caché primero. Además `script.js` auto-recarga la página una vez al detectar `controllerchange` (SW nuevo activo), para que las actualizaciones lleguen solas. Al pasar de un SW cache-first viejo a este arreglo hubo que decirle al usuario que reinstalara el SW (cerrar pestañas / "Borrar y restablecer"); con el arreglo ya no debería repetirse.
 5. **Próximo sorteo + recordatorio** (`DIAS_SORTEO`, `proximoSorteo`): banner con cuenta regresiva; botón que pide permiso de `Notification` y avisa los días de sorteo al abrir la app (no hay push en background — requeriría FCM/Blaze).
 6. **Compartir tiquetes** (`compartirTiquete`): genera imagen del tiquete en canvas y usa Web Share API (`navigator.share` con files → sheet nativo/WhatsApp); respaldo: descarga imagen + copia texto.
 
