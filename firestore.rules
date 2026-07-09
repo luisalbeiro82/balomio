@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reglas para la colección de tareas
+    match /tareas/{taskId} {
+      // Lectura: el dueño (uid) o alguien con quien se compartió (su email
+      // está en sharedWith). Las consultas del cliente filtran por uid o por
+      // array-contains del email, así que Firestore las acepta.
+      allow read: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        request.auth.token.email in resource.data.get('sharedWith', [])
+      );
+
+      // Crear: autenticado y el uid del doc debe ser el suyo
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Actualizar: el dueño puede todo. Un colaborador (email en sharedWith)
+      // puede editar la tarea PERO sin cambiar el dueño ni la lista de
+      // compartidos (no puede apropiarse de la tarea).
+      allow update: if request.auth != null && (
+        resource.data.uid == request.auth.uid ||
+        (
+          request.auth.token.email in resource.data.get('sharedWith', []) &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.get('sharedWith', []) == resource.data.get('sharedWith', [])
+        )
+      );
+
+      // Eliminar: solo el dueño
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+    }
+
+    // Perfil del usuario (incluye su plan free/premium).
+    // Cada usuario solo puede leer/escribir su propio documento (id == uid).
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // BaloMio: apuestas de lotería guardadas, privadas por usuario.
+    // Cada usuario solo puede leer/escribir sus propias apuestas.
+    match /balomio/{userId}/apuestas/{apuestaId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+  }
+}

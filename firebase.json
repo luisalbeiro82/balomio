@@ -1,0 +1,15 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "target": "generador",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "numeros.JPG",
+      "**/node_modules/**"
+    ]
+  }
+}

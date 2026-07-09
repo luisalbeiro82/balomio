@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "mi-todo-list-premium"
+  },
+  "targets": {
+    "mi-todo-list-premium": {
+      "hosting": {
+        "generador": [
+          "generador-suerte"
+        ]
+      }
+    }
+  }
+}

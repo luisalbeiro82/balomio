@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BaloMio — Generador Baloto y MiLoto</title>
+    <meta name="theme-color" content="#0d1b2a">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <main class="contenedor">
+
+        <header class="cabecera">
+            <div class="zona-auth">
+                <button id="botonLogin" class="boton-login">Entrar con Google</button>
+                <div id="infoUsuario" class="info-usuario oculto">
+                    <img id="fotoUsuario" class="foto-usuario" alt="" referrerpolicy="no-referrer">
+                    <span id="nombreUsuario"></span>
+                    <button id="botonLogout" class="boton-logout">Salir</button>
+                </div>
+            </div>
+            <h1><img src="icon-192.png" alt="" class="logo">BaloMio</h1>
+            <p class="subtitulo">Tiquetes aleatorios para Baloto y MiLoto</p>
+        </header>
+
+        <!-- Selector de juego -->
+        <nav class="tabs" id="tabs">
+            <button class="tab activo" data-juego="miloto">MiLoto</button>
+            <button class="tab" data-juego="baloto">Baloto</button>
+        </nav>
+
+        <p class="descripcion" id="descripcionJuego"></p>
+
+        <!-- Controles -->
+        <section class="tarjeta controles">
+            <div class="control">
+                <label for="cantidadTiquetes">Tiquetes</label>
+                <select id="cantidadTiquetes">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <label class="control check">
+                <input type="checkbox" id="evitarPopulares" checked>
+                <span>Evitar combinaciones populares<small>Fechas, secuencias y patrones que mucha gente juega (si ganas, compartes menos el premio)</small></span>
+            </label>
+            <button class="boton-principal" id="generar">Generar</button>
+        </section>
+
+        <!-- Tiquetes generados -->
+        <section id="zonaTiquetes" class="zona-tiquetes"></section>
+
+        <!-- Apuestas guardadas -->
+        <section class="oculto" id="seccionGuardadas">
+            <h2 class="titulo-seccion">💾 Mis apuestas <span id="origenGuardadas" class="origen-guardadas"></span></h2>
+            <div id="zonaGuardadas" class="zona-tiquetes"></div>
+        </section>
+
+        <!-- Comparador -->
+        <section class="tarjeta comparador oculto" id="comparador">
+            <h2>¿Cuántos acertaste?</h2>
+            <p class="nota">Escribe los números ganadores del sorteo oficial y compara tus tiquetes. Se guardan para la próxima vez.</p>
+            <a id="enlaceResultados" class="enlace-oficial" href="https://baloto.com/resultados" target="_blank" rel="noopener">Ver resultados oficiales ↗</a>
+            <div class="entradas" id="entradasGanadores">
+                <input type="number" class="entrada-num" min="1" inputmode="numeric" aria-label="Número ganador 1">
+                <input type="number" class="entrada-num" min="1" inputmode="numeric" aria-label="Número ganador 2">
+                <input type="number" class="entrada-num" min="1" inputmode="numeric" aria-label="Número ganador 3">
+                <input type="number" class="entrada-num" min="1" inputmode="numeric" aria-label="Número ganador 4">
+                <input type="number" class="entrada-num" min="1" inputmode="numeric" aria-label="Número ganador 5">
+                <input type="number" class="entrada-num entrada-super" min="1" max="16" inputmode="numeric" aria-label="Superbalota ganadora" placeholder="SB">
+            </div>
+            <button class="boton-secundario" id="comparar">Comparar</button>
+            <div id="resultadoComparacion"></div>
+        </section>
+
+        <footer class="pie">
+            <p class="enlaces-pie">
+                <a href="https://baloto.com/resultados" target="_blank" rel="noopener">Resultados Baloto ↗</a>
+                <a href="https://baloto.com/miloto/resultados/" target="_blank" rel="noopener">Resultados MiLoto ↗</a>
+            </p>
+            <p id="probabilidad"></p>
+            <p class="aviso">Cada sorteo es independiente: ninguna estadística ni patrón aumenta tu probabilidad de ganar. Juega con responsabilidad y solo dinero que puedas perder.</p>
+        </footer>
+
+    </main>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
