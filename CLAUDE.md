@@ -19,6 +19,11 @@ Generador de tiquetes para Baloto y MiLoto (loterías de Colombia). Vanilla JS, 
 - baloto.com NO tiene API pública, no envía CORS y bloquea IPs de datacenter/proxies (verificado 2026-07-09): los resultados ganadores se digitan a mano en el comparador. Una Cloud Function requeriría plan Blaze y probablemente también sería bloqueada.
 - `index.html` referencia `style.css?v=N` y `script.js?v=N`: **subir la versión al editar esos archivos** (hubo problemas de caché en móvil). Hosting envía `Cache-Control: no-cache` para html/js/css/json.
 - Íconos generados con GDI+ (PowerShell System.Drawing): balota teal con "B". `manifest.json` para el acceso directo Android.
+- Botón "Jugar en línea (oficial)": abre https://apuestaaqui.baloto.com/#/seguridad/login (plataforma oficial que vende ambos juegos). `urlJugar` por juego en `JUEGOS`; la etiqueta cambia según el juego activo.
+
+## Funcionalidades actuales (al 2026-07-09)
+
+Generador de tiquetes (con filtro de combinaciones populares) · guardado de apuestas (localStorage / Firestore + login Google) · comparador de aciertos (digitando ganadores) · estadísticas de frecuencia con semilla histórica 2025–2026 (calientes/fríos + gráfico) · botón de jugar en línea. Verificación visual de UI con Chrome headless (`--headless=new`, ojo: fuerza ~500px de ancho, usar ventana ≥500 para que la imagen no recorte).
 
 ## Hoja de ruta (pendientes acordados)
 

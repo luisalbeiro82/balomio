@@ -27,6 +27,7 @@ const JUEGOS = {
         maximo: 39,
         superbalota: null,
         urlResultados: "https://baloto.com/miloto/resultados/",
+        urlJugar: "https://apuestaaqui.baloto.com/#/seguridad/login",
         descripcion: "Elige 5 números del 1 al 39. Sorteos: lunes, martes, jueves y viernes 10:00 p.m.",
         // C(39,5)
         probabilidad: "1 entre 575.757",
@@ -38,6 +39,7 @@ const JUEGOS = {
         maximo: 43,
         superbalota: 16,
         urlResultados: "https://baloto.com/resultados",
+        urlJugar: "https://apuestaaqui.baloto.com/#/seguridad/login",
         descripcion: "Elige 5 números del 1 al 43 + Superbalota del 1 al 16. Sorteos: lunes, miércoles y sábados 11:00 p.m.",
         // C(43,5) × 16
         probabilidad: "1 entre 15.401.568",
@@ -383,6 +385,10 @@ async function actualizarJuego() {
     entradaSuper.value = guardados.superbalota ?? "";
 
     document.getElementById("enlaceResultados").href = juego.urlResultados;
+
+    const jugar = document.getElementById("jugarEnLinea");
+    jugar.href = juego.urlJugar;
+    jugar.textContent = `🎟️ Jugar ${juego.nombre} en línea (oficial) ↗`;
 
     document.body.dataset.juego = juegoActual;
     document.getElementById("zonaTiquetes").innerHTML = "";
