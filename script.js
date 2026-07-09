@@ -59,7 +59,13 @@ let juegoActual = "miloto";
 let tiquetesGenerados = []; // [{ numeros: [..], superbalota: n|null }]
 let usuario = null;         // usuario de Firebase o null
 let apuestasCache = [];     // apuestas guardadas del juego actual
-let sorteosCache = [];      // resultados oficiales registrados al comparar (juego actual)
+let sorteosCache = [];      // resultados que el usuario registra al comparar (juego actual)
+let sorteosSemilla = [];    // historial oficial precargado del juego actual (solo lectura)
+
+// Semilla histórica por juego (archivos servidos junto a la app). Baloto: sorteos
+// oficiales 2025–2026 digitados desde resultadobaloto.com / resultados-de-loteria.com.
+const SEMILLAS = { baloto: "sorteos-baloto.json" };
+const semillaCache = {};    // juego -> array (para no re-descargar)
 
 // ===== Aleatoriedad segura =====
 // Entero uniforme en [1, maximo] usando crypto (sin sesgo, por rechazo)
@@ -198,6 +204,28 @@ async function cargarSorteos() {
     } else {
         sorteosCache = leerSorteosLocales(juegoActual);
     }
+}
+
+// Carga (una sola vez) la semilla histórica del juego; si no hay o falla, arreglo vacío
+async function cargarSemilla(juego) {
+    if (!SEMILLAS[juego]) return [];
+    if (semillaCache[juego]) return semillaCache[juego];
+    try {
+        const resp = await fetch(SEMILLAS[juego]);
+        semillaCache[juego] = resp.ok ? await resp.json() : [];
+    } catch (error) {
+        console.error("No se pudo cargar la semilla histórica:", error);
+        semillaCache[juego] = [];
+    }
+    return semillaCache[juego];
+}
+
+// Une semilla histórica + sorteos del usuario, sin duplicar combinaciones
+function sorteosParaEstadisticas() {
+    const mapa = new Map();
+    for (const s of sorteosSemilla) mapa.set(idApuesta(juegoActual, s), s);
+    for (const s of sorteosCache) mapa.set(idApuesta(juegoActual, s), s);
+    return [...mapa.values()];
 }
 
 // Persiste un sorteo (deduplica por combinación: reescribir el mismo resultado no lo cuenta doble)
@@ -364,6 +392,7 @@ async function actualizarJuego() {
 
     await cargarApuestas();
     mostrarApuestasGuardadas();
+    sorteosSemilla = await cargarSemilla(juegoActual);
     await cargarSorteos();
     mostrarEstadisticas();
 }
@@ -406,7 +435,8 @@ function grupoCalientesFrios(titulo, lista, esFrio) {
 function mostrarEstadisticas() {
     const juego = JUEGOS[juegoActual];
     const seccion = document.getElementById("estadisticas");
-    const n = sorteosCache.length;
+    const sorteos = sorteosParaEstadisticas();
+    const n = sorteos.length;
 
     if (n === 0) {
         seccion.classList.add("oculto");
@@ -414,11 +444,14 @@ function mostrarEstadisticas() {
     }
     seccion.classList.remove("oculto");
 
+    const hayHistorial = sorteosSemilla.length > 0;
     document.getElementById("notaEstadisticas").textContent =
-        `Basado en ${n} sorteo${n === 1 ? "" : "s"} de ${juego.nombre} que has registrado al comparar. ` +
-        `Se enriquece cada vez que digitas un resultado nuevo.`;
+        `Basado en ${n} sorteos de ${juego.nombre}` +
+        (hayHistorial
+            ? `: historial oficial 2025–2026 más los que registres al comparar.`
+            : ` que has registrado al comparar. Se enriquece con cada resultado nuevo.`);
 
-    const freq = calcularFrecuencias(sorteosCache, juego.maximo);
+    const freq = calcularFrecuencias(sorteos, juego.maximo);
     const maxFreq = Math.max(1, ...freq);
 
     // Gráfico de barras: frecuencia por número
@@ -590,6 +623,7 @@ onAuthStateChanged(auth, async usuarioFirebase => {
             await migrarSorteosLocales();
         }
         await cargarApuestas();
+        sorteosSemilla = await cargarSemilla(juegoActual);
         await cargarSorteos();
     } catch (error) {
         console.error("Error sincronizando datos:", error);
