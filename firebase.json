@@ -16,7 +16,11 @@
     "ignore": [
       "firebase.json",
       "**/.*",
+      "**/.git/**",
       "numeros.JPG",
+      "CLAUDE.md",
+      "README.md",
+      "firestore.rules",
       "**/node_modules/**"
     ]
   }
