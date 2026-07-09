@@ -28,4 +28,4 @@ Generador de tiquetes para Baloto y MiLoto (loterías de Colombia). Vanilla JS, 
    - UI (sección `#estadisticas`): gráfico de barras de frecuencia por número (una sola serie, `--acento`), calientes 🔥 / fríos ❄️ (fríos = balotas huecas para no depender solo del color). Aviso de que NO predice nada.
    - Si más adelante se quiere semilla histórica de Kaggle, basta con precargar docs en la colección `sorteos` con el mismo esquema.
 2. El usuario iba a renombrar la carpeta local `azar` → `balomio` (si las rutas de memoria de Claude no coinciden, este archivo es la fuente de verdad).
-3. Revisar el botón "Entrar con Google" en móvil (se veía sin estilo por caché; verificar tras el fix de versionado).
+3. ~~Revisar el botón "Entrar con Google" en móvil~~ ✅ HECHO (2026-07-09): era caché; el versionado lo resolvió. Se verificó con Chrome headless (no había overflow real: el "corte" en screenshots de 390px era artefacto porque headless fuerza ~500px de ancho). Se le agregó el logo "G" multicolor para que sea inequívocamente un botón de Google.

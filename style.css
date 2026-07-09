@@ -76,6 +76,17 @@ body {
     transition: border-color 0.2s;
 }
 
+.boton-login {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    line-height: 1;
+}
+
+.g-logo {
+    flex: 0 0 auto;
+}
+
 .boton-login:hover,
 .boton-logout:hover {
     border-color: var(--acento);
