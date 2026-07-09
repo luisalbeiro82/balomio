@@ -1,13 +1,13 @@
 // Service worker de BaloMio — funcionamiento offline e instalación PWA.
 // Sube CACHE cada vez que cambien los assets (va de la mano con ?v=N del index).
-const CACHE = "balomio-v10";
+const CACHE = "balomio-v11";
 
 // App shell + datos + SDK de Firebase (para que la app arranque sin conexión)
 const PRECACHE = [
     "./",
     "index.html",
-    "style.css?v=10",
-    "script.js?v=10",
+    "style.css?v=11",
+    "script.js?v=11",
     "manifest.json",
     "sorteos-baloto.json",
     "sorteos-miloto.json",
@@ -45,11 +45,26 @@ self.addEventListener("fetch", event => {
     // Peticiones dinámicas de Firebase (auth/firestore) van siempre a la red
     if (/googleapis\.com|firebaseio\.com|identitytoolkit|firestore\.googleapis/.test(url.host)) return;
 
+    // HTML / navegación: RED PRIMERO, para recibir siempre la última versión.
+    // (El resto de assets van versionados con ?v=N, así que caché primero es seguro.)
+    const esHTML = req.mode === "navigate" ||
+        (req.headers.get("accept") || "").includes("text/html");
+    if (esHTML) {
+        event.respondWith(
+            fetch(req).then(resp => {
+                const copia = resp.clone();
+                caches.open(CACHE).then(cache => cache.put(req, copia));
+                return resp;
+            }).catch(() => caches.match(req).then(r => r || caches.match("index.html")))
+        );
+        return;
+    }
+
+    // Resto: caché primero, con respaldo a la red
     event.respondWith(
         caches.match(req).then(cacheado => {
             if (cacheado) return cacheado;
             return fetch(req).then(resp => {
-                // Cachea respuestas válidas del mismo origen para la próxima vez
                 if (resp.ok && url.origin === self.location.origin) {
                     const copia = resp.clone();
                     caches.open(CACHE).then(cache => cache.put(req, copia));

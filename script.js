@@ -1078,6 +1078,15 @@ if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("sw.js").catch(err =>
             console.warn("No se pudo registrar el service worker:", err));
     });
+    // Cuando se active una versión nueva del SW, recarga una vez para tomarla
+    // (solo si ya había un SW controlando: evita recargar en la 1ª visita).
+    const yaControlado = !!navigator.serviceWorker.controller;
+    let recargando = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!yaControlado || recargando) return;
+        recargando = true;
+        window.location.reload();
+    });
 }
 
 actualizarJuego();
