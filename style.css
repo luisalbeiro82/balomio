@@ -240,6 +240,136 @@ body {
     transform: translateY(0);
 }
 
+/* ===== Próximo sorteo + recordatorio ===== */
+.proximo-sorteo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--fondo-tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+}
+
+.proximo-sorteo span {
+    color: var(--texto);
+}
+
+.boton-recordatorio {
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--texto);
+    background: transparent;
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.boton-recordatorio:hover {
+    border-color: var(--acento);
+}
+
+.boton-recordatorio.activo {
+    border-color: var(--acento);
+    color: var(--acento);
+}
+
+/* ===== Análisis del histórico ===== */
+.titulo-analisis {
+    font-size: 0.95rem;
+    margin: 22px 0 12px;
+}
+
+.analisis-historico {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bloque-analisis h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    margin-bottom: 8px;
+}
+
+.fila-analisis {
+    display: grid;
+    grid-template-columns: 68px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+}
+
+.et-analisis {
+    color: var(--texto);
+}
+
+.pista-analisis {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.barra-analisis {
+    height: 100%;
+    min-width: 2px;
+    background: var(--acento);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+}
+
+.barra-analisis.tenue {
+    background: var(--acento-oscuro);
+    opacity: 0.55;
+}
+
+.val-analisis {
+    color: var(--texto-suave);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.nota-suma {
+    font-size: 0.82rem;
+    color: var(--texto-suave);
+}
+
+/* ===== Nota histórica y compartir en tiquetes ===== */
+.nota-historico {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--texto-suave);
+}
+
+.boton-compartir {
+    display: block;
+    margin: 10px auto 0;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--texto);
+    background: transparent;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.boton-compartir:hover {
+    border-color: var(--acento);
+    color: var(--acento);
+}
+
 /* ===== Botón jugar en línea ===== */
 .boton-jugar {
     display: flex;

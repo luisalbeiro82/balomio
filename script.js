@@ -5,7 +5,7 @@ import {
     getRedirectResult, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-    getFirestore, collection, doc, setDoc, deleteDoc, getDocs
+    getFirestore, collection, doc, setDoc, deleteDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseApp = initializeApp({
@@ -63,11 +63,14 @@ let usuario = null;         // usuario de Firebase o null
 let apuestasCache = [];     // apuestas guardadas del juego actual
 let sorteosCache = [];      // resultados que el usuario registra al comparar (juego actual)
 let sorteosSemilla = [];    // historial oficial precargado del juego actual (solo lectura)
+let sorteosCompartidos = []; // histórico común aportado por toda la comunidad (juego actual)
+let estadoJuego = null;     // { freq, calientes:Set, frios:Set, combos:Set, sumaProm } para anotar tiquetes
 
 // Semilla histórica por juego (archivos servidos junto a la app). Sorteos oficiales
 // 2025–2026: Baloto de resultadobaloto.com / resultados-de-loteria.com; MiLoto de quecayo.com.
 const SEMILLAS = { baloto: "sorteos-baloto.json", miloto: "sorteos-miloto.json" };
 const semillaCache = {};    // juego -> array (para no re-descargar)
+const compartidosCache = {}; // juego -> array (histórico común, cacheado por sesión)
 
 // ===== Aleatoriedad segura =====
 // Entero uniforme en [1, maximo] usando crypto (sin sesgo, por rechazo)
@@ -222,10 +225,40 @@ async function cargarSemilla(juego) {
     return semillaCache[juego];
 }
 
-// Une semilla histórica + sorteos del usuario, sin duplicar combinaciones
+// ===== Histórico compartido (colección pública balomio_sorteos) =====
+// Lo que cualquiera digita al comparar enriquece un histórico común, de lectura
+// pública. Solo usuarios autenticados aportan (escritura validada por reglas).
+function coleccionCompartida() {
+    return collection(db, "balomio_sorteos");
+}
+
+async function cargarCompartidos(juego) {
+    if (compartidosCache[juego]) return compartidosCache[juego];
+    try {
+        const captura = await getDocs(query(coleccionCompartida(), where("juego", "==", juego)));
+        compartidosCache[juego] = captura.docs.map(d => d.data());
+    } catch (error) {
+        console.error("No se pudieron cargar los sorteos compartidos:", error);
+        compartidosCache[juego] = [];
+    }
+    return compartidosCache[juego];
+}
+
+async function persistirCompartido(sorteo) {
+    if (!usuario) return; // solo usuarios autenticados aportan al histórico común
+    const id = idApuesta(sorteo.juego, sorteo);
+    await setDoc(doc(coleccionCompartida(), id), sorteo);
+    const arr = compartidosCache[sorteo.juego] || [];
+    if (!arr.some(s => idApuesta(sorteo.juego, s) === id)) arr.push(sorteo);
+    compartidosCache[sorteo.juego] = arr;
+    if (sorteo.juego === juegoActual) sorteosCompartidos = arr;
+}
+
+// Une semilla histórica + histórico común + sorteos del usuario, sin duplicar combinaciones
 function sorteosParaEstadisticas() {
     const mapa = new Map();
     for (const s of sorteosSemilla) mapa.set(idApuesta(juegoActual, s), s);
+    for (const s of sorteosCompartidos) mapa.set(idApuesta(juegoActual, s), s);
     for (const s of sorteosCache) mapa.set(idApuesta(juegoActual, s), s);
     return [...mapa.values()];
 }
@@ -310,11 +343,41 @@ function crearTarjetaTiquete(tiquete, titulo) {
     return tarjeta;
 }
 
+// Anota un tiquete contra el histórico (curiosidad; no cambia la probabilidad)
+function anotarTiquete(tiquete) {
+    if (!estadoJuego) return "";
+    const cal = tiquete.numeros.filter(n => estadoJuego.calientes.has(n)).length;
+    const fri = tiquete.numeros.filter(n => estadoJuego.frios.has(n)).length;
+    const suma = tiquete.numeros.reduce((a, b) => a + b, 0);
+    const yaSalio = estadoJuego.combos.has(tiquete.numeros.join("-"));
+    const partes = [];
+    if (cal) partes.push(`🔥 ${cal} caliente${cal > 1 ? "s" : ""}`);
+    if (fri) partes.push(`❄️ ${fri} frío${fri > 1 ? "s" : ""}`);
+    partes.push(`suma ${suma} (prom. ${estadoJuego.sumaProm})`);
+    partes.push(yaSalio ? "⚠️ combinación ya salió antes" : "combinación nunca vista");
+    return partes.join(" · ");
+}
+
 function mostrarTiquetes(tiquetes) {
     const zona = document.getElementById("zonaTiquetes");
     zona.innerHTML = "";
     tiquetes.forEach((tiquete, indice) => {
         const tarjeta = crearTarjetaTiquete(tiquete, `Tiquete ${indice + 1}`);
+
+        const texto = anotarTiquete(tiquete);
+        if (texto) {
+            const nota = document.createElement("p");
+            nota.className = "nota-historico";
+            nota.title = "Dato histórico de curiosidad. Cada sorteo es independiente: esto NO cambia tu probabilidad.";
+            nota.textContent = texto;
+            tarjeta.insertBefore(nota, tarjeta.querySelector(".aciertos"));
+        }
+
+        const botonCompartir = document.createElement("button");
+        botonCompartir.className = "boton-compartir";
+        botonCompartir.textContent = "📤 Compartir";
+        botonCompartir.addEventListener("click", () => compartirTiquete(tiquete));
+        tarjeta.appendChild(botonCompartir);
 
         const botonGuardar = document.createElement("button");
         botonGuardar.className = "boton-guardar";
@@ -396,11 +459,23 @@ async function actualizarJuego() {
     document.getElementById("resultadoComparacion").innerHTML = "";
     tiquetesGenerados = [];
 
+    // Estas no dependen de la red: se muestran de inmediato
+    mostrarProximoSorteo();
+    actualizarBotonRecordatorio();
+
     await cargarApuestas();
     mostrarApuestasGuardadas();
     sorteosSemilla = await cargarSemilla(juegoActual);
     await cargarSorteos();
-    mostrarEstadisticas();
+    mostrarEstadisticas(); // ya muestra (y deja estadoJuego listo) con semilla + tus sorteos
+
+    // El histórico común llega por red: cuando esté, refresca sin bloquear lo anterior
+    const juegoAlPedir = juegoActual;
+    cargarCompartidos(juegoActual).then(arr => {
+        if (juegoAlPedir !== juegoActual) return; // el usuario ya cambió de juego
+        sorteosCompartidos = arr;
+        mostrarEstadisticas();
+    });
 }
 
 // ===== Estadísticas de frecuencia =====
@@ -454,8 +529,8 @@ function mostrarEstadisticas() {
     document.getElementById("notaEstadisticas").textContent =
         `Basado en ${n} sorteos de ${juego.nombre}` +
         (hayHistorial
-            ? `: historial oficial 2025–2026 más los que registres al comparar.`
-            : ` que has registrado al comparar. Se enriquece con cada resultado nuevo.`);
+            ? `: historial oficial 2025–2026 más los que tú y la comunidad registran al comparar.`
+            : ` registrados al comparar. Se enriquece con cada resultado nuevo.`);
 
     const freq = calcularFrecuencias(sorteos, juego.maximo);
     const maxFreq = Math.max(1, ...freq);
@@ -489,11 +564,118 @@ function mostrarEstadisticas() {
     for (let num = 1; num <= juego.maximo; num++) ordenados.push({ num, veces: freq[num] });
     ordenados.sort((a, b) => b.veces - a.veces || a.num - b.num);
 
+    const calientes = ordenados.slice(0, 6);
+    const frios = ordenados.slice(-6).reverse();
+
     const cont = document.getElementById("calientesFrios");
     cont.innerHTML = "";
-    cont.appendChild(grupoCalientesFrios("🔥 Más frecuentes", ordenados.slice(0, 6), false));
-    cont.appendChild(grupoCalientesFrios("❄️ Menos frecuentes",
-        ordenados.slice(-6).reverse(), true));
+    cont.appendChild(grupoCalientesFrios("🔥 Más frecuentes", calientes, false));
+    cont.appendChild(grupoCalientesFrios("❄️ Menos frecuentes", frios, true));
+
+    // Estado del juego (para anotar los tiquetes generados contra el histórico)
+    const sumas = sorteos.map(s => s.numeros.reduce((a, b) => a + b, 0));
+    estadoJuego = {
+        freq,
+        calientes: new Set(calientes.map(c => c.num)),
+        frios: new Set(frios.map(c => c.num)),
+        combos: new Set(sorteos.map(s => s.numeros.join("-"))),
+        sumaProm: Math.round(sumas.reduce((a, b) => a + b, 0) / (sumas.length || 1))
+    };
+
+    mostrarAnalisis(sorteos, juego);
+}
+
+// ===== Análisis del histórico (pares/impares, altos/bajos, decenas, primos, suma) =====
+function esPrimo(n) {
+    if (n < 2) return false;
+    for (let i = 2; i * i <= n; i++) if (n % i === 0) return false;
+    return true;
+}
+
+// Una fila: etiqueta + barra proporcional + valor y porcentaje (texto, no solo color)
+function filaAnalisis(etiqueta, valor, total, hueco = false) {
+    const fila = document.createElement("div");
+    fila.className = "fila-analisis";
+    const et = document.createElement("span");
+    et.className = "et-analisis";
+    et.textContent = etiqueta;
+    const pista = document.createElement("div");
+    pista.className = "pista-analisis";
+    const barra = document.createElement("div");
+    barra.className = hueco ? "barra-analisis tenue" : "barra-analisis";
+    barra.style.width = `${total ? (valor / total) * 100 : 0}%`;
+    pista.appendChild(barra);
+    const val = document.createElement("span");
+    val.className = "val-analisis";
+    const pct = total ? Math.round((valor / total) * 100) : 0;
+    val.textContent = `${valor} · ${pct}%`;
+    fila.appendChild(et);
+    fila.appendChild(pista);
+    fila.appendChild(val);
+    return fila;
+}
+
+function bloqueAnalisis(titulo, filas) {
+    const bloque = document.createElement("div");
+    bloque.className = "bloque-analisis";
+    const h = document.createElement("h4");
+    h.textContent = titulo;
+    bloque.appendChild(h);
+    filas.forEach(f => bloque.appendChild(f));
+    return bloque;
+}
+
+function mostrarAnalisis(sorteos, juego) {
+    const cont = document.getElementById("analisisHistorico");
+    if (!cont) return;
+    cont.innerHTML = "";
+
+    // Todas las balotas principales (sin superbalota) de todos los sorteos
+    const balls = [];
+    sorteos.forEach(s => (s.numeros || []).forEach(n => balls.push(n)));
+    const total = balls.length;
+    if (!total) return;
+
+    const pares = balls.filter(n => n % 2 === 0).length;
+    const primos = balls.filter(esPrimo).length;
+
+    const t = Math.ceil(juego.maximo / 3);
+    const bajos = balls.filter(n => n <= t).length;
+    const altos = balls.filter(n => n > 2 * t).length;
+    const medios = total - bajos - altos;
+
+    cont.appendChild(bloqueAnalisis("Pares e impares", [
+        filaAnalisis("Pares", pares, total),
+        filaAnalisis("Impares", total - pares, total, true)
+    ]));
+
+    cont.appendChild(bloqueAnalisis(`Bajos (1–${t}), medios y altos (${2 * t + 1}–${juego.maximo})`, [
+        filaAnalisis("Bajos", bajos, total),
+        filaAnalisis("Medios", medios, total, true),
+        filaAnalisis("Altos", altos, total)
+    ]));
+
+    cont.appendChild(bloqueAnalisis("Primos y no primos", [
+        filaAnalisis("Primos", primos, total),
+        filaAnalisis("No primos", total - primos, total, true)
+    ]));
+
+    // Decenas (1–9, 10–19, 20–29, 30–39, 40–43)
+    const decenas = {};
+    balls.forEach(n => { const d = Math.floor(n / 10); decenas[d] = (decenas[d] || 0) + 1; });
+    const rangos = { 0: "1–9", 1: "10–19", 2: "20–29", 3: "30–39", 4: "40–43" };
+    const filasDec = Object.keys(rangos)
+        .filter(d => d * 10 <= juego.maximo)
+        .map((d, i) => filaAnalisis(rangos[d], decenas[d] || 0, total, i % 2 === 1));
+    cont.appendChild(bloqueAnalisis("Por decenas", filasDec));
+
+    // Suma de la combinación
+    const sumas = sorteos.map(s => s.numeros.reduce((a, b) => a + b, 0));
+    const prom = Math.round(sumas.reduce((a, b) => a + b, 0) / sumas.length);
+    const nota = document.createElement("p");
+    nota.className = "nota-suma";
+    nota.textContent = `Suma de los 5 números: promedio ${prom} (rango histórico ${Math.min(...sumas)}–${Math.max(...sumas)}).`;
+    cont.appendChild(nota);
 }
 
 // ===== Comparador de aciertos =====
@@ -570,6 +752,7 @@ function compararTiquetes() {
     }
     mostrarEstadisticas();
     persistirSorteo(sorteo).catch(console.error);
+    persistirCompartido(sorteo).catch(console.error);
 
     const conjuntoGanador = new Set(ganadores);
 
@@ -588,6 +771,177 @@ function compararTiquetes() {
         ? "No hay tiquetes para comparar. Genera o guarda alguno primero."
         : `Mejor tiquete: ${categoriaPremio(juego, mejor.aciertos, mejor.acertoSuper)}`;
     resultado.innerHTML = `<p class="veredicto">${mensaje}</p>`;
+}
+
+// ===== Compartir / exportar tiquetes =====
+function textoTiquete(tiquete) {
+    const juego = JUEGOS[juegoActual];
+    const nums = tiquete.numeros.map(n => String(n).padStart(2, "0")).join(" - ");
+    const sb = tiquete.superbalota != null ? ` + Superbalota ${String(tiquete.superbalota).padStart(2, "0")}` : "";
+    return `🎟️ Mi tiquete ${juego.nombre} (BaloMio):\n${nums}${sb}\n\nGenera los tuyos: https://generador-suerte.web.app`;
+}
+
+// Dibuja el tiquete en un canvas para compartirlo como imagen
+function dibujarTiquete(tiquete) {
+    const juego = JUEGOS[juegoActual];
+    const r = 46, gap = 16, padX = 40, padTop = 118, padBottom = 54, escala = 2;
+    const cuenta = tiquete.numeros.length + (tiquete.superbalota != null ? 1 : 0);
+    const w = padX * 2 + cuenta * (r * 2) + (cuenta - 1) * gap;
+    const h = padTop + r * 2 + padBottom;
+    const canvas = document.createElement("canvas");
+    canvas.width = w * escala;
+    canvas.height = h * escala;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(escala, escala);
+
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, "#0d1b2a");
+    grad.addColorStop(1, "#23303f");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    const acento = juegoActual === "baloto" ? "#e63946" : "#00b4a0";
+    const acentoOsc = juegoActual === "baloto" ? "#b32734" : "#00877a";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#f2f5f7";
+    ctx.font = "bold 34px 'Segoe UI', sans-serif";
+    ctx.fillText("BaloMio", padX, 44);
+    ctx.fillStyle = acento;
+    ctx.font = "600 22px 'Segoe UI', sans-serif";
+    ctx.fillText(`${juego.nombre} · tiquete aleatorio`, padX, 82);
+
+    let x = padX + r;
+    const y = padTop + r;
+    const bola = (num, c1, c2) => {
+        const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.2, x, y, r);
+        g.addColorStop(0, c1);
+        g.addColorStop(1, c2);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 30px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(String(num).padStart(2, "0"), x, y + 1);
+        ctx.textAlign = "left";
+        x += r * 2 + gap;
+    };
+    tiquete.numeros.forEach(n => bola(n, acento, acentoOsc));
+    if (tiquete.superbalota != null) bola(tiquete.superbalota, "#f5a623", "#c47d0e");
+
+    ctx.fillStyle = "#a8b4bd";
+    ctx.font = "16px 'Segoe UI', sans-serif";
+    ctx.fillText("generador-suerte.web.app", padX, h - 32);
+    return canvas;
+}
+
+async function compartirTiquete(tiquete) {
+    const texto = textoTiquete(tiquete);
+    const canvas = dibujarTiquete(tiquete);
+    try {
+        const blob = await new Promise(res => canvas.toBlob(res, "image/png"));
+        const archivo = new File([blob], "tiquete-balomio.png", { type: "image/png" });
+        if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+            await navigator.share({ files: [archivo], text: texto });
+            return;
+        }
+        if (navigator.share) {
+            await navigator.share({ text: texto });
+            return;
+        }
+    } catch (error) {
+        if (error && error.name === "AbortError") return; // el usuario canceló
+        console.error(error);
+    }
+    // Respaldo (escritorio o navegadores sin Web Share): descarga imagen + copia texto
+    try {
+        const a = document.createElement("a");
+        a.href = canvas.toDataURL("image/png");
+        a.download = "tiquete-balomio.png";
+        a.click();
+        if (navigator.clipboard) await navigator.clipboard.writeText(texto);
+        alert("Imagen descargada y texto copiado. Ya puedes pegarlo en WhatsApp.");
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// ===== Próximo sorteo y recordatorio =====
+// getDay(): 0=domingo … 6=sábado. Hora local (Colombia, sin horario de verano).
+const DIAS_SORTEO = {
+    miloto: { dias: [1, 2, 4, 5], hora: 22, nombreHora: "10:00 p.m." },
+    baloto: { dias: [1, 3, 6], hora: 23, nombreHora: "11:00 p.m." }
+};
+const NOMBRE_DIA = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+
+function proximoSorteo(juego) {
+    const cfg = DIAS_SORTEO[juego];
+    const ahora = new Date();
+    for (let i = 0; i < 8; i++) {
+        const d = new Date(ahora);
+        d.setDate(ahora.getDate() + i);
+        d.setHours(cfg.hora, 0, 0, 0);
+        if (cfg.dias.includes(d.getDay()) && d > ahora) return d;
+    }
+    return null;
+}
+
+function mostrarProximoSorteo() {
+    const el = document.getElementById("proximoSorteo");
+    if (!el) return;
+    const cfg = DIAS_SORTEO[juegoActual];
+    const prox = proximoSorteo(juegoActual);
+    if (!prox) { el.textContent = ""; return; }
+    const ms = prox - new Date();
+    const dias = Math.floor(ms / 86400000);
+    const hrs = Math.floor((ms % 86400000) / 3600000);
+    const falta = dias > 0 ? `en ${dias}d ${hrs}h` : (hrs > 0 ? `en ${hrs}h` : "muy pronto");
+    el.textContent = `⏰ Próximo sorteo de ${JUEGOS[juegoActual].nombre}: ${NOMBRE_DIA[prox.getDay()]} ${cfg.nombreHora} (${falta})`;
+}
+
+function actualizarBotonRecordatorio() {
+    const btn = document.getElementById("botonRecordatorio");
+    if (!btn) return;
+    const activo = localStorage.getItem(`recordatorio-${juegoActual}`) === "1";
+    btn.textContent = activo ? "🔔 Recordatorio activado" : "🔕 Recordarme";
+    btn.classList.toggle("activo", activo);
+}
+
+async function alternarRecordatorio() {
+    const clave = `recordatorio-${juegoActual}`;
+    if (localStorage.getItem(clave) === "1") {
+        localStorage.removeItem(clave);
+        actualizarBotonRecordatorio();
+        return;
+    }
+    if ("Notification" in window) {
+        let permiso = Notification.permission;
+        if (permiso === "default") permiso = await Notification.requestPermission();
+        if (permiso !== "granted") {
+            alert("Activa las notificaciones del navegador para recibir el recordatorio de los días de sorteo.");
+            return;
+        }
+    }
+    localStorage.setItem(clave, "1");
+    actualizarBotonRecordatorio();
+    notificarSiEsDiaDeSorteo(true);
+}
+
+// Notifica si hoy hay sorteo de algún juego con recordatorio activo (al abrir la app)
+function notificarSiEsDiaDeSorteo(forzar = false) {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const hoy = new Date();
+    for (const juego of Object.keys(DIAS_SORTEO)) {
+        if (localStorage.getItem(`recordatorio-${juego}`) !== "1") continue;
+        if (!DIAS_SORTEO[juego].dias.includes(hoy.getDay())) continue;
+        if (!forzar && localStorage.getItem(`avisado-${juego}`) === hoy.toDateString()) continue;
+        new Notification("🎰 BaloMio", {
+            body: `Hoy hay sorteo de ${JUEGOS[juego].nombre} a las ${DIAS_SORTEO[juego].nombreHora}. ¡Genera y juega tus números!`,
+            icon: "icon-192.png"
+        });
+        localStorage.setItem(`avisado-${juego}`, hoy.toDateString());
+    }
 }
 
 // ===== Sesión =====
@@ -631,6 +985,7 @@ onAuthStateChanged(auth, async usuarioFirebase => {
         await cargarApuestas();
         sorteosSemilla = await cargarSemilla(juegoActual);
         await cargarSorteos();
+        sorteosCompartidos = await cargarCompartidos(juegoActual);
     } catch (error) {
         console.error("Error sincronizando datos:", error);
     }
@@ -655,4 +1010,15 @@ document.getElementById("generar").addEventListener("click", () => {
 
 document.getElementById("comparar").addEventListener("click", compararTiquetes);
 
+document.getElementById("botonRecordatorio").addEventListener("click", alternarRecordatorio);
+
+// ===== PWA: service worker para funcionar offline e instalarse =====
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(err =>
+            console.warn("No se pudo registrar el service worker:", err));
+    });
+}
+
 actualizarJuego();
+notificarSiEsDiaDeSorteo();

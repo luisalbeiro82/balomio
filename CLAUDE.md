@@ -23,7 +23,17 @@ Generador de tiquetes para Baloto y MiLoto (loterías de Colombia). Vanilla JS, 
 
 ## Funcionalidades actuales (al 2026-07-09)
 
-Generador de tiquetes (con filtro de combinaciones populares) · guardado de apuestas (localStorage / Firestore + login Google) · comparador de aciertos (digitando ganadores) · estadísticas de frecuencia con semilla histórica 2025–2026 (calientes/fríos + gráfico) · botón de jugar en línea. Verificación visual de UI con Chrome headless (`--headless=new`, ojo: fuerza ~500px de ancho, usar ventana ≥500 para que la imagen no recorte).
+Generador de tiquetes (con filtro de combinaciones populares) · guardado de apuestas (localStorage / Firestore + login Google) · comparador de aciertos (digitando ganadores) · estadísticas de frecuencia con semilla histórica 2025–2026 (calientes/fríos + gráfico) · botón de jugar en línea.
+
+Añadidas 2026-07-09 (6 funcionalidades en una tanda):
+1. **Histórico compartido**: colección pública `balomio_sorteos` (reglas: `read: if true`; `create` solo autenticado y validado; sin update/delete). Lo que se digita en el comparador aporta al histórico común; se combina con semilla + sorteos propios en `sorteosParaEstadisticas()`. Carga NO bloqueante (la semilla pinta al instante y el compartido refresca al llegar por red — importante para no dejar `estadoJuego`/UI colgando).
+2. **Análisis del histórico** (`mostrarAnalisis`): pares/impares, bajos/medios/altos (terciles del rango), primos, decenas, y suma promedio+rango. Barras horizontales con valor+% (no solo color).
+3. **Anotación de tiquetes generados** (`anotarTiquete` con `estadoJuego`): nº de calientes/fríos que incluye, suma vs. promedio, y si la combinación ya salió. Curiosidad, con aviso de que no cambia la probabilidad.
+4. **PWA offline** (`sw.js`, CACHE `balomio-vN` = misma versión que `?v=N`): precachea app shell + semillas + SDK de Firebase (gstatic) para arrancar sin conexión; peticiones dinámicas de Firestore/Auth siempre van a la red. `manifest.json` con maskable icon, scope, orientation.
+5. **Próximo sorteo + recordatorio** (`DIAS_SORTEO`, `proximoSorteo`): banner con cuenta regresiva; botón que pide permiso de `Notification` y avisa los días de sorteo al abrir la app (no hay push en background — requeriría FCM/Blaze).
+6. **Compartir tiquetes** (`compartirTiquete`): genera imagen del tiquete en canvas y usa Web Share API (`navigator.share` con files → sheet nativo/WhatsApp); respaldo: descarga imagen + copia texto.
+
+Verificación visual de UI con Chrome headless (`--headless=new`, ojo: fuerza ~500px de ancho, usar ventana ≥500 para que la imagen no recorte; el scroll no se refleja bien, mejor ventana alta y recortar con PIL).
 
 ## Hoja de ruta (pendientes acordados)
 

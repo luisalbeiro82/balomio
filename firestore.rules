@@ -52,5 +52,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }
+
+    // BaloMio: histórico común de sorteos oficiales (estadísticas compartidas).
+    // Lectura pública; solo usuarios autenticados aportan, con datos válidos.
+    // No se puede editar ni borrar (el histórico no se altera).
+    match /balomio_sorteos/{sorteoId} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.juego in ['baloto', 'miloto']
+                    && request.resource.data.numeros is list
+                    && request.resource.data.numeros.size() == 5;
+      allow update, delete: if false;
+    }
   }
 }

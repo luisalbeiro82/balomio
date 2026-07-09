@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -42,6 +42,12 @@
         </nav>
 
         <p class="descripcion" id="descripcionJuego"></p>
+
+        <!-- Próximo sorteo + recordatorio -->
+        <div class="proximo-sorteo" id="bannerProximo">
+            <span id="proximoSorteo"></span>
+            <button id="botonRecordatorio" class="boton-recordatorio">🔕 Recordarme</button>
+        </div>
 
         <!-- Controles -->
         <section class="tarjeta controles">
@@ -98,6 +104,8 @@
                 <div class="grafico-freq" id="graficoFrecuencia"></div>
             </div>
             <div class="calientes-frios" id="calientesFrios"></div>
+            <h3 class="titulo-analisis">Análisis del histórico</h3>
+            <div class="analisis-historico" id="analisisHistorico"></div>
             <p class="aviso-stats">Curiosidad histórica: cada sorteo es independiente y estos números <strong>no predicen</strong> los próximos. Solo refleja lo que ha salido en los resultados que has registrado.</p>
         </section>
 
@@ -112,6 +120,6 @@
 
     </main>
 
-    <script type="module" src="script.js?v=8"></script>
+    <script type="module" src="script.js?v=9"></script>
 </body>
 </html>
