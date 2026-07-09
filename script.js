@@ -439,13 +439,20 @@ async function actualizarJuego() {
 
     // Ajustar entradas del comparador y recuperar los últimos ganadores guardados
     const guardados = JSON.parse(localStorage.getItem(`ganadores-${juegoActual}`) || "{}");
-    document.querySelectorAll(".entrada-num:not(.entrada-super)").forEach((entrada, i) => {
+    document.querySelectorAll("#entradasGanadores .entrada-num:not(.entrada-super)").forEach((entrada, i) => {
         entrada.max = juego.maximo;
         entrada.value = guardados.numeros?.[i] ?? "";
     });
-    const entradaSuper = document.querySelector(".entrada-super");
+    const entradaSuper = document.querySelector("#entradasGanadores .entrada-super");
     entradaSuper.classList.toggle("oculto", !juego.superbalota);
     entradaSuper.value = guardados.superbalota ?? "";
+
+    // Registro manual: ajustar máximos, mostrar/ocultar superbalota y limpiar
+    document.querySelectorAll(".entrada-manual").forEach(e => { e.max = juego.maximo; e.value = ""; });
+    const superManual = document.querySelector(".entrada-manual-super");
+    superManual.classList.toggle("oculto", !juego.superbalota);
+    superManual.value = "";
+    document.getElementById("resultadoManual").innerHTML = "";
 
     document.getElementById("enlaceResultados").href = juego.urlResultados;
 
@@ -678,6 +685,50 @@ function mostrarAnalisis(sorteos, juego) {
     cont.appendChild(nota);
 }
 
+// ===== Registro manual de apuestas jugadas =====
+async function guardarApuestaManual() {
+    const juego = JUEGOS[juegoActual];
+    const entradas = [...document.querySelectorAll(".entrada-manual")];
+    const numeros = entradas.map(e => Number(e.value));
+    const salida = document.getElementById("resultadoManual");
+
+    if (numeros.some(n => !n || n < 1 || n > juego.maximo)) {
+        salida.innerHTML = `<p class="error">Escribe los 5 números (entre 1 y ${juego.maximo}).</p>`;
+        return;
+    }
+    if (new Set(numeros).size !== 5) {
+        salida.innerHTML = `<p class="error">Los números no pueden repetirse.</p>`;
+        return;
+    }
+
+    let superbalota = null;
+    if (juego.superbalota) {
+        superbalota = Number(document.querySelector(".entrada-manual-super").value);
+        if (!superbalota || superbalota < 1 || superbalota > juego.superbalota) {
+            salida.innerHTML = `<p class="error">Escribe la Superbalota (entre 1 y ${juego.superbalota}).</p>`;
+            return;
+        }
+    }
+
+    const tiquete = { numeros: [...numeros].sort((a, b) => a - b), superbalota };
+    try {
+        const nueva = await guardarApuesta(tiquete);
+        if (nueva) {
+            salida.innerHTML = `<p class="veredicto">✓ Guardada en «Mis apuestas». Puedes registrar otra.</p>`;
+            entradas.forEach(e => (e.value = ""));
+            const s = document.querySelector(".entrada-manual-super");
+            if (s) s.value = "";
+            entradas[0].focus();
+            mostrarApuestasGuardadas();
+        } else {
+            salida.innerHTML = `<p class="error">Esa apuesta ya estaba guardada.</p>`;
+        }
+    } catch (error) {
+        console.error(error);
+        salida.innerHTML = `<p class="error">Error al guardar, reintenta.</p>`;
+    }
+}
+
 // ===== Comparador de aciertos =====
 function categoriaPremio(juego, aciertos, acertoSuper) {
     if (juego.superbalota) {
@@ -715,7 +766,7 @@ function compararGrupo(tiquetes, tarjetas, juego, conjuntoGanador, superGanadora
 
 function compararTiquetes() {
     const juego = JUEGOS[juegoActual];
-    const entradas = [...document.querySelectorAll(".entrada-num:not(.entrada-super)")];
+    const entradas = [...document.querySelectorAll("#entradasGanadores .entrada-num:not(.entrada-super)")];
     const ganadores = entradas.map(e => Number(e.value));
     const resultado = document.getElementById("resultadoComparacion");
 
@@ -730,7 +781,7 @@ function compararTiquetes() {
 
     let superGanadora = null;
     if (juego.superbalota) {
-        superGanadora = Number(document.querySelector(".entrada-super").value);
+        superGanadora = Number(document.querySelector("#entradasGanadores .entrada-super").value);
         if (!superGanadora || superGanadora < 1 || superGanadora > juego.superbalota) {
             resultado.innerHTML = `<p class="error">Escribe la Superbalota (entre 1 y ${juego.superbalota}).</p>`;
             return;
@@ -1011,6 +1062,15 @@ document.getElementById("generar").addEventListener("click", () => {
 document.getElementById("comparar").addEventListener("click", compararTiquetes);
 
 document.getElementById("botonRecordatorio").addEventListener("click", alternarRecordatorio);
+
+document.getElementById("toggleManual").addEventListener("click", () => {
+    const form = document.getElementById("formManual");
+    const abierto = form.classList.toggle("oculto") === false;
+    document.getElementById("toggleManual").setAttribute("aria-expanded", String(abierto));
+    if (abierto) document.querySelector(".entrada-manual").focus();
+});
+
+document.getElementById("guardarManual").addEventListener("click", guardarApuestaManual);
 
 // ===== PWA: service worker para funcionar offline e instalarse =====
 if ("serviceWorker" in navigator) {

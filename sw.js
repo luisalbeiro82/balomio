@@ -1,13 +1,13 @@
 // Service worker de BaloMio — funcionamiento offline e instalación PWA.
 // Sube CACHE cada vez que cambien los assets (va de la mano con ?v=N del index).
-const CACHE = "balomio-v9";
+const CACHE = "balomio-v10";
 
 // App shell + datos + SDK de Firebase (para que la app arranque sin conexión)
 const PRECACHE = [
     "./",
     "index.html",
-    "style.css?v=9",
-    "script.js?v=9",
+    "style.css?v=10",
+    "script.js?v=10",
     "manifest.json",
     "sorteos-baloto.json",
     "sorteos-miloto.json",

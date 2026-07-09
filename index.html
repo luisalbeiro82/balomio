@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -73,6 +73,24 @@
         <!-- Tiquetes generados -->
         <section id="zonaTiquetes" class="zona-tiquetes"></section>
 
+        <!-- Registro manual de apuestas jugadas -->
+        <section class="tarjeta registro-manual">
+            <button id="toggleManual" class="boton-toggle-manual" aria-expanded="false">➕ Registrar una apuesta que ya jugué</button>
+            <div id="formManual" class="form-manual oculto">
+                <p class="nota">Escribe los números que jugaste (en papel o en línea) para guardarlos en «Mis apuestas» y compararlos con el sorteo después.</p>
+                <div class="entradas" id="entradasManual">
+                    <input type="number" class="entrada-num entrada-manual" min="1" inputmode="numeric" aria-label="Número 1">
+                    <input type="number" class="entrada-num entrada-manual" min="1" inputmode="numeric" aria-label="Número 2">
+                    <input type="number" class="entrada-num entrada-manual" min="1" inputmode="numeric" aria-label="Número 3">
+                    <input type="number" class="entrada-num entrada-manual" min="1" inputmode="numeric" aria-label="Número 4">
+                    <input type="number" class="entrada-num entrada-manual" min="1" inputmode="numeric" aria-label="Número 5">
+                    <input type="number" class="entrada-num entrada-super entrada-manual-super" min="1" max="16" inputmode="numeric" aria-label="Superbalota" placeholder="SB">
+                </div>
+                <button id="guardarManual" class="boton-secundario">Guardar apuesta</button>
+                <div id="resultadoManual"></div>
+            </div>
+        </section>
+
         <!-- Apuestas guardadas -->
         <section class="oculto" id="seccionGuardadas">
             <h2 class="titulo-seccion">💾 Mis apuestas <span id="origenGuardadas" class="origen-guardadas"></span></h2>
@@ -120,6 +138,6 @@
 
     </main>
 
-    <script type="module" src="script.js?v=9"></script>
+    <script type="module" src="script.js?v=10"></script>
 </body>
 </html>

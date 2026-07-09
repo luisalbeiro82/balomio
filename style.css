@@ -505,6 +505,33 @@ body {
     min-height: 1.2em;
 }
 
+/* ===== Registro manual de apuestas ===== */
+.boton-toggle-manual {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--acento);
+    background: transparent;
+    border: 1px dashed var(--borde);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.boton-toggle-manual:hover {
+    border-color: var(--acento);
+}
+
+.form-manual {
+    margin-top: 14px;
+}
+
+.form-manual .boton-secundario {
+    width: 100%;
+    margin-top: 4px;
+}
+
 /* ===== Comparador ===== */
 .comparador h2 {
     font-size: 1.2rem;

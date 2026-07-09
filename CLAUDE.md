@@ -33,6 +33,8 @@ Añadidas 2026-07-09 (6 funcionalidades en una tanda):
 5. **Próximo sorteo + recordatorio** (`DIAS_SORTEO`, `proximoSorteo`): banner con cuenta regresiva; botón que pide permiso de `Notification` y avisa los días de sorteo al abrir la app (no hay push en background — requeriría FCM/Blaze).
 6. **Compartir tiquetes** (`compartirTiquete`): genera imagen del tiquete en canvas y usa Web Share API (`navigator.share` con files → sheet nativo/WhatsApp); respaldo: descarga imagen + copia texto.
 
+**Registro manual de apuestas** (2026-07-09): sección `#registro-manual` con un formulario plegable (`toggleManual`/`guardarApuestaManual`) para que el usuario guarde en «Mis apuestas» combinaciones que jugó por su cuenta (papel/en línea), no solo las que genera la app. Reusa `guardarApuesta`. OJO: los inputs manuales comparten clase `.entrada-num` con el comparador, por eso los selectores del comparador se acotaron a `#entradasGanadores` (los manuales usan `.entrada-manual`/`.entrada-manual-super`).
+
 Verificación visual de UI con Chrome headless (`--headless=new`, ojo: fuerza ~500px de ancho, usar ventana ≥500 para que la imagen no recorte; el scroll no se refleja bien, mejor ventana alta y recortar con PIL).
 
 ## Hoja de ruta (pendientes acordados)
