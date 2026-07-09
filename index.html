@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -80,6 +80,17 @@
             <div id="resultadoComparacion"></div>
         </section>
 
+        <!-- Estadísticas -->
+        <section class="tarjeta estadisticas oculto" id="estadisticas">
+            <h2>📊 Números que más han salido</h2>
+            <p class="nota" id="notaEstadisticas"></p>
+            <div class="pista-grafico">
+                <div class="grafico-freq" id="graficoFrecuencia"></div>
+            </div>
+            <div class="calientes-frios" id="calientesFrios"></div>
+            <p class="aviso-stats">Curiosidad histórica: cada sorteo es independiente y estos números <strong>no predicen</strong> los próximos. Solo refleja lo que ha salido en los resultados que has registrado.</p>
+        </section>
+
         <footer class="pie">
             <p class="enlaces-pie">
                 <a href="https://baloto.com/resultados" target="_blank" rel="noopener">Resultados Baloto ↗</a>
@@ -91,6 +102,6 @@
 
     </main>
 
-    <script type="module" src="script.js?v=3"></script>
+    <script type="module" src="script.js?v=4"></script>
 </body>
 </html>

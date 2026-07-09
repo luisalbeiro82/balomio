@@ -22,9 +22,10 @@ Generador de tiquetes para Baloto y MiLoto (loterías de Colombia). Vanilla JS, 
 
 ## Hoja de ruta (pendientes acordados)
 
-1. **Estadísticas de números que más salen** (próxima funcionalidad):
-   - Fuente de datos: no hay API; opciones — dataset histórico de Kaggle (https://www.kaggle.com/datasets/jaforero/baloto-colombia) como JSON semilla en el repo + entrada manual de cada nuevo sorteo (guardar resultados digitados en el comparador a Firestore, colección compartida `balomio_sorteos` o por usuario).
-   - UI: gráfico de barras de frecuencia por número (por juego), números "calientes/fríos".
-   - IMPORTANTE: presentarlo como curiosidad histórica con el aviso de que NO predice nada (cada sorteo es independiente) — el usuario ya aceptó ese enfoque honesto.
+1. ~~**Estadísticas de números que más salen**~~ ✅ HECHO (2026-07-09):
+   - Enfoque elegido: **empezar vacío y crecer solo** (sin semilla de Kaggle). Cada resultado que el usuario digita en el comparador se guarda como sorteo y alimenta las estadísticas.
+   - Datos: `sorteosCache`; Firestore por usuario en `balomio/{uid}/sorteos/{id}` (id = combinación, deduplica) si hay sesión, `localStorage` `sorteos-{juego}` si no. Migración a la nube al iniciar sesión (`migrarSorteosLocales`). Regla Firestore `sorteos` agregada.
+   - UI (sección `#estadisticas`): gráfico de barras de frecuencia por número (una sola serie, `--acento`), calientes 🔥 / fríos ❄️ (fríos = balotas huecas para no depender solo del color). Aviso de que NO predice nada.
+   - Si más adelante se quiere semilla histórica de Kaggle, basta con precargar docs en la colección `sorteos` con el mismo esquema.
 2. El usuario iba a renombrar la carpeta local `azar` → `balomio` (si las rutas de memoria de Claude no coinciden, este archivo es la fuente de verdad).
 3. Revisar el botón "Entrar con Google" en móvil (se veía sin estilo por caché; verificar tras el fix de versionado).

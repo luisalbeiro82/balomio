@@ -59,6 +59,7 @@ let juegoActual = "miloto";
 let tiquetesGenerados = []; // [{ numeros: [..], superbalota: n|null }]
 let usuario = null;         // usuario de Firebase o null
 let apuestasCache = [];     // apuestas guardadas del juego actual
+let sorteosCache = [];      // resultados oficiales registrados al comparar (juego actual)
 
 // ===== Aleatoriedad segura =====
 // Entero uniforme en [1, maximo] usando crypto (sin sesgo, por rechazo)
@@ -175,6 +176,56 @@ async function borrarApuesta(indice) {
     }
     apuestasCache.splice(indice, 1);
     mostrarApuestasGuardadas();
+}
+
+// ===== Historial de sorteos (para estadísticas) =====
+// Cada resultado que el usuario digita en el comparador se guarda aquí y así el
+// dataset crece con el uso. Firestore por usuario si hay sesión, localStorage si no.
+function coleccionSorteos() {
+    return collection(db, "balomio", usuario.uid, "sorteos");
+}
+
+function leerSorteosLocales(juego) {
+    return JSON.parse(localStorage.getItem(`sorteos-${juego}`) || "[]");
+}
+
+async function cargarSorteos() {
+    if (usuario) {
+        const captura = await getDocs(coleccionSorteos());
+        sorteosCache = captura.docs
+            .map(d => d.data())
+            .filter(s => s.juego === juegoActual);
+    } else {
+        sorteosCache = leerSorteosLocales(juegoActual);
+    }
+}
+
+// Persiste un sorteo (deduplica por combinación: reescribir el mismo resultado no lo cuenta doble)
+async function persistirSorteo(sorteo) {
+    const id = idApuesta(sorteo.juego, sorteo);
+    if (usuario) {
+        await setDoc(doc(coleccionSorteos(), id), sorteo);
+    } else {
+        const locales = leerSorteosLocales(sorteo.juego)
+            .filter(s => idApuesta(sorteo.juego, s) !== id);
+        locales.unshift(sorteo);
+        localStorage.setItem(`sorteos-${sorteo.juego}`, JSON.stringify(locales));
+    }
+}
+
+async function migrarSorteosLocales() {
+    for (const juego of Object.keys(JUEGOS)) {
+        const locales = leerSorteosLocales(juego);
+        for (const s of locales) {
+            await setDoc(doc(coleccionSorteos(), idApuesta(juego, s)), {
+                juego,
+                numeros: s.numeros,
+                superbalota: s.superbalota ?? null,
+                fecha: s.fecha || new Date().toISOString()
+            });
+        }
+        if (locales.length) localStorage.removeItem(`sorteos-${juego}`);
+    }
 }
 
 // Al iniciar sesión, sube las apuestas locales a Firestore y limpia el navegador
@@ -313,6 +364,97 @@ async function actualizarJuego() {
 
     await cargarApuestas();
     mostrarApuestasGuardadas();
+    await cargarSorteos();
+    mostrarEstadisticas();
+}
+
+// ===== Estadísticas de frecuencia =====
+function calcularFrecuencias(sorteos, maximo) {
+    const freq = new Array(maximo + 1).fill(0);
+    sorteos.forEach(s => (s.numeros || []).forEach(n => {
+        if (n >= 1 && n <= maximo) freq[n]++;
+    }));
+    return freq; // freq[num], índices 1..maximo
+}
+
+function crearChip(num, veces, esFrio) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    const balota = document.createElement("div");
+    balota.className = esFrio ? "mini-balota frio" : "mini-balota";
+    balota.textContent = String(num).padStart(2, "0");
+    const detalle = document.createElement("small");
+    detalle.textContent = `${veces} ${veces === 1 ? "vez" : "veces"}`;
+    chip.appendChild(balota);
+    chip.appendChild(detalle);
+    return chip;
+}
+
+function grupoCalientesFrios(titulo, lista, esFrio) {
+    const grupo = document.createElement("div");
+    grupo.className = "grupo-cf";
+    const h = document.createElement("h3");
+    h.textContent = titulo;
+    grupo.appendChild(h);
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    lista.forEach(({ num, veces }) => chips.appendChild(crearChip(num, veces, esFrio)));
+    grupo.appendChild(chips);
+    return grupo;
+}
+
+function mostrarEstadisticas() {
+    const juego = JUEGOS[juegoActual];
+    const seccion = document.getElementById("estadisticas");
+    const n = sorteosCache.length;
+
+    if (n === 0) {
+        seccion.classList.add("oculto");
+        return;
+    }
+    seccion.classList.remove("oculto");
+
+    document.getElementById("notaEstadisticas").textContent =
+        `Basado en ${n} sorteo${n === 1 ? "" : "s"} de ${juego.nombre} que has registrado al comparar. ` +
+        `Se enriquece cada vez que digitas un resultado nuevo.`;
+
+    const freq = calcularFrecuencias(sorteosCache, juego.maximo);
+    const maxFreq = Math.max(1, ...freq);
+
+    // Gráfico de barras: frecuencia por número
+    const grafico = document.getElementById("graficoFrecuencia");
+    grafico.innerHTML = "";
+    for (let num = 1; num <= juego.maximo; num++) {
+        const col = document.createElement("div");
+        col.className = "col-freq";
+        col.title = `Número ${num}: ${freq[num]} ${freq[num] === 1 ? "vez" : "veces"}`;
+
+        const pista = document.createElement("div");
+        pista.className = "pista-freq";
+        const barra = document.createElement("div");
+        barra.className = "barra-freq";
+        barra.style.height = `${(freq[num] / maxFreq) * 100}%`;
+        pista.appendChild(barra);
+
+        const etq = document.createElement("span");
+        etq.className = "num-freq";
+        etq.textContent = num;
+
+        col.appendChild(pista);
+        col.appendChild(etq);
+        grafico.appendChild(col);
+    }
+
+    // Calientes (más frecuentes) y fríos (menos frecuentes)
+    const ordenados = [];
+    for (let num = 1; num <= juego.maximo; num++) ordenados.push({ num, veces: freq[num] });
+    ordenados.sort((a, b) => b.veces - a.veces || a.num - b.num);
+
+    const cont = document.getElementById("calientesFrios");
+    cont.innerHTML = "";
+    cont.appendChild(grupoCalientesFrios("🔥 Más frecuentes", ordenados.slice(0, 6), false));
+    cont.appendChild(grupoCalientesFrios("❄️ Menos frecuentes",
+        ordenados.slice(-6).reverse(), true));
 }
 
 // ===== Comparador de aciertos =====
@@ -377,6 +519,19 @@ function compararTiquetes() {
     localStorage.setItem(`ganadores-${juegoActual}`,
         JSON.stringify({ numeros: ganadores, superbalota: superGanadora }));
 
+    // Registrar el resultado para las estadísticas (crece con cada comparación)
+    const sorteo = {
+        juego: juegoActual,
+        numeros: ganadores,
+        superbalota: superGanadora,
+        fecha: new Date().toISOString()
+    };
+    if (!sorteosCache.some(s => idApuesta(juegoActual, s) === idApuesta(juegoActual, sorteo))) {
+        sorteosCache.unshift(sorteo);
+    }
+    mostrarEstadisticas();
+    persistirSorteo(sorteo).catch(console.error);
+
     const conjuntoGanador = new Set(ganadores);
 
     const mejorGenerados = compararGrupo(
@@ -430,12 +585,17 @@ onAuthStateChanged(auth, async usuarioFirebase => {
     usuario = usuarioFirebase;
     actualizarInterfazUsuario();
     try {
-        if (usuario) await migrarLocalesANube();
+        if (usuario) {
+            await migrarLocalesANube();
+            await migrarSorteosLocales();
+        }
         await cargarApuestas();
+        await cargarSorteos();
     } catch (error) {
-        console.error("Error sincronizando apuestas:", error);
+        console.error("Error sincronizando datos:", error);
     }
     mostrarApuestasGuardadas();
+    mostrarEstadisticas();
 });
 
 // ===== Eventos =====

@@ -414,6 +414,117 @@ body {
     font-weight: 600;
 }
 
+/* ===== Estadísticas ===== */
+.estadisticas h2 {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+}
+
+.pista-grafico {
+    overflow-x: auto;
+    margin: 4px 0 18px;
+    padding-bottom: 4px;
+}
+
+.grafico-freq {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    min-width: min-content;
+}
+
+.col-freq {
+    flex: 0 0 auto;
+    width: clamp(11px, 2.4vw, 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.pista-freq {
+    height: 120px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+.barra-freq {
+    width: 100%;
+    min-height: 2px;
+    background: linear-gradient(var(--acento), var(--acento-oscuro));
+    border-radius: 4px 4px 0 0;
+    transition: height 0.4s ease;
+}
+
+.num-freq {
+    font-size: 0.6rem;
+    color: var(--texto-suave);
+    font-variant-numeric: tabular-nums;
+}
+
+.calientes-frios {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.grupo-cf h3 {
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--texto-suave);
+    margin-bottom: 10px;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.chip {
+    text-align: center;
+}
+
+.mini-balota {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    background: radial-gradient(circle at 30% 30%, var(--acento), var(--acento-oscuro));
+    box-shadow: inset -3px -4px 8px rgba(0, 0, 0, 0.3), 0 3px 8px rgba(0, 0, 0, 0.4);
+    margin: 0 auto;
+}
+
+/* Los "fríos" van huecos (forma distinta, no solo color) */
+.mini-balota.frio {
+    background: transparent;
+    color: var(--texto);
+    border: 2px solid var(--borde);
+    box-shadow: none;
+}
+
+.chip small {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--texto-suave);
+    margin-top: 4px;
+}
+
+.aviso-stats {
+    margin-top: 18px;
+    font-size: 0.78rem;
+    color: var(--texto-suave);
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
 /* ===== Pie ===== */
 .pie {
     text-align: center;

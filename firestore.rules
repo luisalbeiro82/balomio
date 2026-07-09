@@ -45,5 +45,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }
+
+    // BaloMio: resultados de sorteos que el usuario digita en el comparador,
+    // usados para las estadísticas de frecuencia. Privados por usuario.
+    match /balomio/{userId}/sorteos/{sorteoId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
   }
 }
